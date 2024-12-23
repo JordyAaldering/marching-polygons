@@ -1635,7 +1635,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "marching-shapes"
+name = "marching-polygons"
 version = "0.1.0"
 dependencies = [
  "eframe",

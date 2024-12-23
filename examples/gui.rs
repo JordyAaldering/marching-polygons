@@ -1,15 +1,13 @@
 use eframe::egui::*;
 
-const N: usize = 7;
+const N: u8 = 7;
 
 const ANGLE: f32 = std::f32::consts::TAU / N as f32;
 
 fn main() -> eframe::Result {
-    let options = eframe::NativeOptions::default();
+    let mut state = [false; N as usize];
 
-    let mut state = [false; N];
-
-    eframe::run_simple_native("example", options, move |ctx, _frame| {
+    eframe::run_simple_native("example", Default::default(), move |ctx, _frame| {
         CentralPanel::default().show(ctx, |ui| {
             ui.horizontal(|ui| {
                 for s in &mut state {
@@ -22,7 +20,7 @@ fn main() -> eframe::Result {
                 mask <<= 1;
                 mask |= *s as u8;
             }
-            ui.label(format!("0b{:0>N$b}", mask));
+            ui.label(format!("{:#010b}", mask));
 
             let (response, painter) = ui.allocate_painter(ui.available_size(), Sense::hover());
 
@@ -45,26 +43,30 @@ fn main() -> eframe::Result {
             }
             painter.add(Shape::mesh(mesh));
 
-            let mask = marching_shapes::Mask::<N>::new(mask);
             let mut mesh = Mesh::default();
             let mut i = 0;
 
-            for t in mask.march().iter() {
-                let [p0, p1, p2] = t.map(&vertices);
-                mesh.colored_vertex(p0.into(), Color32::ORANGE);
-                mesh.colored_vertex(p1.into(), Color32::ORANGE);
-                mesh.colored_vertex(p2.into(), Color32::ORANGE);
+            let indices = marching_polygons::march::<N>(mask);
+            for [i0, i1, i2] in &indices {
+                let v0 = i0.transform(&vertices);
+                let v1 = i1.transform(&vertices);
+                let v2 = i2.transform(&vertices);
+                mesh.colored_vertex(v0.into(), Color32::ORANGE);
+                mesh.colored_vertex(v1.into(), Color32::ORANGE);
+                mesh.colored_vertex(v2.into(), Color32::ORANGE);
                 mesh.add_triangle(i, i + 1, i + 2);
                 i += 3;
             }
 
             painter.add(Shape::mesh(mesh));
 
-            for t in mask.march().iter() {
-                let [p0, p1, p2] = t.map(&vertices);
-                painter.add(epaint::Shape::line_segment([p0.into(), p1.into()], Stroke::new(3.0, Color32::RED)));
-                painter.add(epaint::Shape::line_segment([p1.into(), p2.into()], Stroke::new(3.0, Color32::RED)));
-                painter.add(epaint::Shape::line_segment([p2.into(), p0.into()], Stroke::new(3.0, Color32::RED)));
+            for [i0, i1, i2] in &indices {
+                let v0 = i0.transform(&vertices);
+                let v1 = i1.transform(&vertices);
+                let v2 = i2.transform(&vertices);
+                painter.add(epaint::Shape::line_segment([v0.into(), v1.into()], Stroke::new(3.0, Color32::RED)));
+                painter.add(epaint::Shape::line_segment([v1.into(), v2.into()], Stroke::new(3.0, Color32::RED)));
+                painter.add(epaint::Shape::line_segment([v2.into(), v0.into()], Stroke::new(3.0, Color32::RED)));
             }
         });
     })
